@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>翻译结果</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .bubble-container {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      -webkit-app-region: drag;
+    }
+
+    .title { color: white; font-size: 14px; font-weight: 500; }
+
+    .close-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-app-region: no-drag;
+    }
+
+    .close-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
+    .original-text {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      max-height: 100px;
+      overflow-y: auto;
+      word-wrap: break-word;
+      -webkit-app-region: no-drag;
+    }
+
+    .translation-text {
+      color: white;
+      font-size: 16px;
+      line-height: 1.6;
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      word-wrap: break-word;
+      -webkit-app-region: no-drag;
+    }
+
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100px;
+      color: white;
+      gap: 10px;
+    }
+
+    .spinner {
+      width: 30px;
+      height: 30px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text { font-size: 14px; opacity: 0.8; }
+
+    .error-message {
+      color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.1);
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .footer {
+      margin-top: 15px;
+      display: none;
+      gap: 10px;
+      -webkit-app-region: no-drag;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    .action-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
+    .model-info {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+      text-align: right;
+      margin-top: 5px;
+      -webkit-app-region: no-drag;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="bubble-container" id="bubbleContainer">
+    <div class="header">
+      <span class="title">翻译结果</span>
+      <button class="close-btn" id="closeBtn">×</button>
+    </div>
+    
+    <div class="original-text" id="originalText">等待截图翻译...</div>
+    
+    <div class="translation-text" id="translationText">
+      <div class="loading">
+        <div class="spinner"></div>
+        <span class="loading-text">准备中...</span>
+      </div>
+    </div>
+    
+    <div class="footer" id="footer">
+      <button class="action-btn" id="copyBtn">复制</button>
+      <button class="action-btn" id="speakBtn">朗读</button>
+    </div>
+    
+    <div class="model-info" id="modelInfo"></div>
+  </div>
+
+  <script>
+    var electronAPI = window.electronAPI;
+    var currentTranslation = '';
+    var isSpeaking = false;
+
+    console.log('Bubble loaded, electronAPI:', !!electronAPI);
+
+    document.getElementById('closeBtn').addEventListener('click', function() {
+      electronAPI.hideBubble();
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', function() {
+      if (currentTranslation) {
+        navigator.clipboard.writeText(currentTranslation);
+      }
+    });
+
+    document.getElementById('speakBtn').addEventListener('click', function() {
+      if (isSpeaking) {
+        speechSynthesis.cancel();
+        isSpeaking = false;
+        document.getElementById('speakBtn').textContent = '朗读';
+        return;
+      }
+      if (currentTranslation) {
+        var utterance = new SpeechSynthesisUtterance(currentTranslation);
+        utterance.lang = 'zh-CN';
+        utterance.onstart = function() { isSpeaking = true; document.getElementById('speakBtn').textContent = '停止'; };
+        utterance.onend = function() { isSpeaking = false; document.getElementById('speakBtn').textContent = '朗读'; };
+        speechSynthesis.speak(utterance);
+      }
+    });
+
+    function showLoading() {
+      document.getElementById('translationText').innerHTML = '<div class="loading"><div class="spinner"></div><span class="loading-text">识别并翻译中...</span></div>';
+      document.getElementById('footer').style.display = 'none';
+      document.getElementById('modelInfo').textContent = '';
+    }
+
+    function showTranslation(data) {
+      console.log('showTranslation called:', data);
+      document.getElementById('originalText').innerText = data.original || '';
+      document.getElementById('translationText').innerText = data.translation || '';
+      document.getElementById('footer').style.display = 'flex';
+      document.getElementById('modelInfo').textContent = '模型: ' + (data.model || '');
+      currentTranslation = data.translation || '';
+    }
+
+    function showError(data) {
+      document.getElementById('translationText').innerHTML = '<div class="error-message">' + (data.message || '未知错误') + '</div>';
+      document.getElementById('footer').style.display = 'none';
+      currentTranslation = '';
+    }
+
+    electronAPI.onShowLoading(showLoading);
+    electronAPI.onUpdateTranslation(showTranslation);
+    electronAPI.onShowError(showError);
+
+    console.log('Bubble event listeners registered');
+  </script>
+</body>
+</html>

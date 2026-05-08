@@ -1,0 +1,59 @@
+{
+  "name": "screen-translator",
+  "version": "1.0.0",
+  "description": "屏幕翻译工具 - 支持快捷键截图翻译，本地Ollama视觉模型识图翻译",
+  "main": "src/main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder --win --x64",
+    "build:portable": "electron-builder --win portable",
+    "lint": "eslint src/",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ScreenTranslator",
+  "license": "MIT",
+  "dependencies": {
+    "electron-store": "^8.1.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "eslint": "^8.56.0"
+  },
+  "build": {
+    "appId": "com.screentranslator.app",
+    "productName": "ScreenTranslator",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "src/assets/icon.ico",
+      "extraResources": [
+        {
+          "from": "src/assets/",
+          "to": "assets/"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "屏幕翻译工具"
+    },
+    "portable": {
+      "artifactName": "ScreenTranslator-${version}-portable.exe"
+    }
+  }
+}

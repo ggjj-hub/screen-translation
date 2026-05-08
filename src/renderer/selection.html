@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>选择区域</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent;
+      cursor: crosshair;
+      user-select: none;
+    }
+
+    #selection {
+      position: absolute;
+      border: 2px dashed #007bff;
+      background: rgba(0, 123, 255, 0.15);
+      display: none;
+    }
+
+    .toolbar {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    .toolbar button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    #confirmBtn {
+      background: #28a745;
+      color: white;
+    }
+
+    #cancelBtn {
+      background: #dc3545;
+      color: white;
+    }
+
+    .hint {
+      position: fixed;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 16px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 1000;
+    }
+
+    .size-info {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 16px;
+      border-radius: 4px;
+      z-index: 1000;
+      display: none;
+    }
+
+    .status-bar {
+      position: fixed;
+      top: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #4fc3f7;
+      font-size: 14px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 8px 16px;
+      border-radius: 4px;
+      z-index: 1000;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="hint">拖拽鼠标选择区域 | Enter 确认 | ESC 取消</div>
+  <div class="size-info" id="sizeInfo">0 × 0</div>
+  <div class="status-bar" id="statusBar">处理中...</div>
+  <div id="selection"></div>
+  
+  <div class="toolbar" id="toolbar" style="display: none;">
+    <button id="confirmBtn">确认翻译</button>
+    <button id="cancelBtn">取消</button>
+  </div>
+
+  <script>
+    var electronAPI = window.electronAPI;
+    var selection = document.getElementById('selection');
+    var toolbar = document.getElementById('toolbar');
+    var sizeInfo = document.getElementById('sizeInfo');
+    var statusBar = document.getElementById('statusBar');
+    var startX = 0, startY = 0, isSelecting = false;
+    var hasSelection = false;
+
+    document.body.addEventListener('mousedown', function(e) {
+      startX = e.clientX;
+      startY = e.clientY;
+      isSelecting = true;
+      hasSelection = false;
+      selection.style.left = startX + 'px';
+      selection.style.top = startY + 'px';
+      selection.style.width = '0px';
+      selection.style.height = '0px';
+      selection.style.display = 'block';
+      toolbar.style.display = 'none';
+      sizeInfo.style.display = 'block';
+      statusBar.style.display = 'none';
+      e.preventDefault();
+    });
+
+    document.body.addEventListener('mousemove', function(e) {
+      if (!isSelecting) return;
+      e.preventDefault();
+
+      var left = Math.min(startX, e.clientX);
+      var top = Math.min(startY, e.clientY);
+      var width = Math.abs(e.clientX - startX);
+      var height = Math.abs(e.clientY - startY);
+
+      selection.style.left = left + 'px';
+      selection.style.top = top + 'px';
+      selection.style.width = width + 'px';
+      selection.style.height = height + 'px';
+
+      sizeInfo.textContent = width + ' × ' + height;
+      sizeInfo.style.left = left + width / 2 + 'px';
+      sizeInfo.style.top = top - 30 + 'px';
+    });
+
+    document.body.addEventListener('mouseup', function(e) {
+      if (!isSelecting) return;
+      isSelecting = false;
+      e.preventDefault();
+
+      var rect = selection.getBoundingClientRect();
+      
+      if (rect.width > 10 && rect.height > 10) {
+        hasSelection = true;
+        toolbar.style.display = 'flex';
+        toolbar.style.left = (rect.left + rect.width / 2) + 'px';
+        toolbar.style.top = (rect.bottom + 10) + 'px';
+        toolbar.style.transform = 'translateX(-50%)';
+        sizeInfo.textContent = rect.width + ' × ' + rect.height + ' (Enter确认 / ESC取消)';
+      } else {
+        selection.style.display = 'none';
+        toolbar.style.display = 'none';
+        sizeInfo.style.display = 'none';
+        hasSelection = false;
+      }
+    });
+
+    function doConfirm() {
+      if (!hasSelection) return;
+      var rect = selection.getBoundingClientRect();
+      statusBar.textContent = '正在截图并翻译，请稍候...';
+      statusBar.style.display = 'block';
+      toolbar.style.display = 'none';
+      sizeInfo.style.display = 'none';
+
+      electronAPI.selectionComplete({
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
+      });
+
+      setTimeout(function() { window.close(); }, 200);
+    }
+
+    function doCancel() {
+      electronAPI.cancelSelection();
+      window.close();
+    }
+
+    document.getElementById('confirmBtn').addEventListener('click', doConfirm);
+    document.getElementById('cancelBtn').addEventListener('click', doCancel);
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && hasSelection) {
+        doConfirm();
+      } else if (e.key === 'Escape') {
+        doCancel();
+      }
+    });
+  </script>
+</body>
+</html>

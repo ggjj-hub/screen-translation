@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>屏幕翻译工具</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: white;
+    }
+
+    .container {
+      padding: 40px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-icon {
+      font-size: 24px;
+    }
+
+    .shortcut-display {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+
+    .key {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .plus {
+      font-size: 20px;
+      opacity: 0.7;
+    }
+
+    .start-btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: white;
+      color: #667eea;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 20px;
+    }
+
+    .start-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .history-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .history-item:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .history-original {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 8px;
+      word-break: break-all;
+    }
+
+    .history-translation {
+      font-size: 15px;
+      color: white;
+      word-break: break-all;
+    }
+
+    .history-meta {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .empty-history {
+      text-align: center;
+      padding: 40px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #28a745;
+    }
+
+    .status-dot.error {
+      background: #dc3545;
+    }
+
+    .clear-btn {
+      background: rgba(220, 53, 69, 0.2);
+      border: 1px solid rgba(220, 53, 69, 0.5);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .clear-btn:hover {
+      background: rgba(220, 53, 69, 0.4);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🌐</div>
+      <h1>屏幕翻译工具</h1>
+      <p class="subtitle">快捷键截图翻译，支持OCR识别和本地大模型翻译</p>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-item">
+        <div class="status-dot" id="ollamaStatus"></div>
+        <span id="ollamaStatusText">Ollama: 检测中...</span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot" id="ocrStatus"></div>
+        <span id="ocrStatusText">视觉模型: 检测中...</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="card-icon">⚡</span>
+        快速开始
+      </div>
+      <p style="margin-bottom: 16px; opacity: 0.8;">按下快捷键开始截图翻译</p>
+      
+      <div class="shortcut-display">
+        <span class="key">Ctrl</span>
+        <span class="plus">+</span>
+        <span class="key">Alt</span>
+        <span class="plus">+</span>
+        <span class="key">T</span>
+      </div>
+
+      <button class="start-btn" id="startBtn">
+        立即截图翻译
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="card-icon">📜</span>
+        翻译历史
+      </div>
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+        <button class="clear-btn" id="clearHistoryBtn">清空历史</button>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="empty-history">暂无翻译记录</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var electronAPI = window.electronAPI;
+    console.log('electronAPI loaded:', !!electronAPI);
+    
+    document.getElementById('startBtn').addEventListener('click', () => {
+      console.log('startBtn clicked');
+      console.log('electronAPI.startCapture:', typeof electronAPI.startCapture);
+      electronAPI.startCapture();
+    });
+
+    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+      if (confirm('确定要清空所有翻译历史吗？')) {
+        electronAPI.clearHistory();
+        loadHistory();
+      }
+    });
+
+    function loadHistory() {
+      const history = electronAPI.getHistory();
+      const historyList = document.getElementById('historyList');
+      
+      if (history.length === 0) {
+        historyList.innerHTML = '<div class="empty-history">暂无翻译记录</div>';
+        return;
+      }
+
+      historyList.innerHTML = history.map(item => `
+        <div class="history-item" data-id="${item.id}">
+          <div class="history-original">${escapeHtml(item.original.substring(0, 100))}${item.original.length > 100 ? '...' : ''}</div>
+          <div class="history-translation">${escapeHtml(item.translation)}</div>
+          <div class="history-meta">
+            <span>${item.model}</span>
+            <span>${formatTime(item.timestamp)}</span>
+          </div>
+        </div>
+      `).join('');
+
+      historyList.querySelectorAll('.history-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const translation = item.querySelector('.history-translation').textContent;
+          navigator.clipboard.writeText(translation).then(() => {
+            alert('已复制到剪贴板');
+          });
+        });
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = now - date;
+      
+      if (diff < 60000) {
+        return '刚刚';
+      } else if (diff < 3600000) {
+        return Math.floor(diff / 60000) + '分钟前';
+      } else if (diff < 86400000) {
+        return Math.floor(diff / 3600000) + '小时前';
+      } else {
+        return date.toLocaleDateString('zh-CN');
+      }
+    }
+
+    async function checkServices() {
+      try {
+        const response = await fetch('http://localhost:11434/api/tags', { 
+          method: 'GET',
+          signal: AbortSignal.timeout(2000)
+        });
+        if (response.ok) {
+          document.getElementById('ollamaStatus').classList.remove('error');
+          document.getElementById('ollamaStatusText').textContent = 'Ollama: 已连接';
+        } else {
+          throw new Error('Ollama响应异常');
+        }
+      } catch (error) {
+        document.getElementById('ollamaStatus').classList.add('error');
+        document.getElementById('ollamaStatusText').textContent = 'Ollama: 未连接';
+      }
+
+      document.getElementById('ocrStatus').classList.remove('error');
+      document.getElementById('ocrStatusText').textContent = '视觉模型: qwen3-vl:8b';
+    }
+
+    electronAPI.onShowHistory(() => {
+      loadHistory();
+    });
+
+    loadHistory();
+    checkServices();
+    setInterval(checkServices, 30000);
+  </script>
+</body>
+</html>
